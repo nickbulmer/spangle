@@ -52,6 +52,12 @@ spangle supports two ways to track usage/costs:
 
 To view a summary any time, run `python ebay_manager.py` and choose **OpenAI usage & cost**.
 
+Admin key environment variable (your setup):
+
+```
+ADMIN_OPENAI_API_KEY=your-admin-openai-api-key
+```
+
 Optional (for DHL collection payload defaults):
 
 ```

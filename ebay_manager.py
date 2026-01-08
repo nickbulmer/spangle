@@ -579,7 +579,7 @@ def show_openai_usage(conn) -> None:
         else:
             print("Tokens: (not available)")
         print()
-        print("If this fails with 401/403, you may need an Admin API key (OPENAI_ADMIN_KEY).")
+        print("If this fails with 401/403, you may need an Admin API key (ADMIN_OPENAI_API_KEY).")
         return
     except Exception as e:
         print(f"API unavailable ({e}). Falling back to local estimate.")

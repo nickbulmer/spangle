@@ -30,13 +30,21 @@ class OpenAIUsageSummary:
 
 def _pick_key() -> str:
     # Per docs, org endpoints often require an admin key.
-    return os.getenv("OPENAI_ADMIN_KEY") or os.getenv("OPENAI_API_KEY") or ""
+    return (
+        os.getenv("ADMIN_OPENAI_API_KEY")
+        or os.getenv("OPENAI_ADMIN_KEY")
+        or os.getenv("OPENAI_API_KEY")
+        or ""
+    )
 
 
 def _headers() -> dict[str, str]:
     key = _pick_key()
     if not key:
-        raise OpenAIUsageAPIError("OPENAI_API_KEY (or OPENAI_ADMIN_KEY) is not set.")
+        raise OpenAIUsageAPIError(
+            "No OpenAI key found. Set ADMIN_OPENAI_API_KEY (preferred for org usage/costs), "
+            "or OPENAI_ADMIN_KEY, or OPENAI_API_KEY."
+        )
     h = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
     org = os.getenv("OPENAI_ORGANIZATION")
     proj = os.getenv("OPENAI_PROJECT")
