@@ -71,6 +71,14 @@ Outputs:
 - `products/your_product_folder/listing.json`
 - `listing_outputs/listings.csv`
 
+## Turntable video support (new)
+
+If you include a `.mov`/`.mp4` in the product folder, spangle will:
+- Extract 3 frames (first/middle/last) into `products/<folder>/_derived/frames/`
+- Create a first-3-seconds highlight clip at `products/<folder>/_derived/highlight_first3s.mp4`
+
+Requires `ffmpeg` installed and on PATH.
+
 ## Requirements
 
 - Python 3.8+

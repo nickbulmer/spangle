@@ -81,6 +81,18 @@ It will:
 - Append a row to `listing_outputs/listings.csv`
 - Create a `.processed` marker file so it won’t reprocess the folder
 
+### Video support (turntable workflow)
+
+If you drop a `.mov` or `.mp4` into a product folder, spangle can:
+- Extract **3 key frames** (first/middle/last) for ChatGPT analysis
+- Create a **first-3-seconds highlight clip** at `products/<folder>/_derived/highlight_first3s.mp4`
+
+This requires `ffmpeg` + `ffprobe` available on your PATH.
+
+Windows install options:
+- `winget install Gyan.FFmpeg`
+- or install from `https://ffmpeg.org/` and add it to PATH
+
 ### Optional: watch mode
 
 If you want it to keep polling for new folders:

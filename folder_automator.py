@@ -4,6 +4,8 @@ import base64
 import csv
 import json
 import os
+import shutil
+import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +18,9 @@ from openai import OpenAI
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 ALLOWED_VIDEO_EXTS = {".mp4", ".mov"}
+DERIVED_DIRNAME = "_derived"
+DERIVED_FRAMES_DIRNAME = "frames"
+DERIVED_HIGHLIGHT_NAME = "highlight_first3s.mp4"
 
 
 def _now_stamp() -> str:
@@ -62,6 +67,112 @@ def _mime_type_for(path: Path) -> str:
     if ext in (".heic", ".heif"):
         return "image/heic"
     return "image/jpeg"
+
+
+def _which_or_none(exe: str) -> Optional[str]:
+    return shutil.which(exe)
+
+
+def _require_ffmpeg() -> tuple[str, str]:
+    ffmpeg = _which_or_none("ffmpeg")
+    ffprobe = _which_or_none("ffprobe")
+    if not ffmpeg or not ffprobe:
+        raise RuntimeError(
+            "ffmpeg/ffprobe not found on PATH. Install ffmpeg to enable video support. "
+            "Then restart your terminal and retry."
+        )
+    return ffmpeg, ffprobe
+
+
+def _run(cmd: list[str]) -> str:
+    p = subprocess.run(cmd, capture_output=True, text=True)
+    if p.returncode != 0:
+        raise RuntimeError(f"Command failed: {' '.join(cmd)}\n{p.stderr.strip()}")
+    return (p.stdout or "").strip()
+
+
+def _probe_duration_seconds(ffprobe: str, video_path: Path) -> float:
+    out = _run(
+        [
+            ffprobe,
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            str(video_path),
+        ]
+    )
+    data = json.loads(out)
+    # Prefer container duration, fallback to first video stream duration.
+    fmt = data.get("format") or {}
+    if fmt.get("duration"):
+        return float(fmt["duration"])
+    for s in data.get("streams") or []:
+        if s.get("codec_type") == "video" and s.get("duration"):
+            return float(s["duration"])
+    raise RuntimeError("Could not determine video duration.")
+
+
+def extract_first3s_highlight(ffmpeg: str, *, video_path: Path, out_path: Path) -> None:
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    # Re-encode (copy can fail if no keyframe at t=0).
+    _run(
+        [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(video_path),
+            "-t",
+            "3",
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            str(out_path),
+        ]
+    )
+
+
+def extract_keyframes_first_mid_last(
+    ffmpeg: str, *, video_path: Path, out_dir: Path, duration_s: float
+) -> list[Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Guard: very short videos still get sane timestamps.
+    mid = max(duration_s / 2.0, 0.0)
+    last = max(duration_s - 0.1, 0.0)
+    stamps = [
+        ("frame_first.jpg", 0.0),
+        ("frame_middle.jpg", mid),
+        ("frame_last.jpg", last),
+    ]
+
+    out_paths: list[Path] = []
+    for name, ts in stamps:
+        out_path = out_dir / name
+        # -ss before -i seeks faster; we re-decode 1 frame.
+        _run(
+            [
+                ffmpeg,
+                "-y",
+                "-ss",
+                f"{ts:.3f}",
+                "-i",
+                str(video_path),
+                "-frames:v",
+                "1",
+                "-q:v",
+                "2",
+                str(out_path),
+            ]
+        )
+        out_paths.append(out_path)
+    return out_paths
 
 
 @dataclass(frozen=True)
@@ -194,17 +305,46 @@ def process_one_product_folder(client: OpenAI, *, product_folder: Path, outputs_
 
     images, videos = _sorted_media_files(product_folder)
     if not images:
-        return False
+        # Still allow video-only folders (turntable workflow)
+        if not videos:
+            return False
 
-    # Quick note about videos: not analyzed yet
+    derived_dir = product_folder / DERIVED_DIRNAME
+    derived_frames_dir = derived_dir / DERIVED_FRAMES_DIRNAME
+    derived_highlight = derived_dir / DERIVED_HIGHLIGHT_NAME
+
+    derived_frames: list[Path] = []
+
+    # Video support: extract frames for analysis + a short highlight clip.
     if videos:
-        # Keep, but do not fail
-        pass
+        # Use the first video by name (user can keep one turntable clip here).
+        video = videos[0]
+        ffmpeg, ffprobe = _require_ffmpeg()
+        duration_s = _probe_duration_seconds(ffprobe, video)
+
+        # Only (re)create derived assets if missing. Delete .processed to force a re-run.
+        if not derived_highlight.exists():
+            extract_first3s_highlight(ffmpeg, video_path=video, out_path=derived_highlight)
+        if not (derived_frames_dir / "frame_first.jpg").exists():
+            derived_frames = extract_keyframes_first_mid_last(
+                ffmpeg, video_path=video, out_dir=derived_frames_dir, duration_s=duration_s
+            )
+        else:
+            derived_frames = [
+                derived_frames_dir / "frame_first.jpg",
+                derived_frames_dir / "frame_middle.jpg",
+                derived_frames_dir / "frame_last.jpg",
+            ]
+
+    # Include derived video frames + any separately-taken photos
+    all_images = [*images, *[p for p in derived_frames if p.exists()]]
+    if not all_images:
+        return False
 
     print(f"\nProcessing: {product_folder.name} ({len(images)} image(s), {len(videos)} video(s))")
 
     hint = product_folder.name
-    data = analyze_folder_with_chatgpt(client, product_folder=product_folder, images=images, hint_name=hint)
+    data = analyze_folder_with_chatgpt(client, product_folder=product_folder, images=all_images, hint_name=hint)
 
     # Save into the product folder
     out_path = product_folder / "listing.json"
