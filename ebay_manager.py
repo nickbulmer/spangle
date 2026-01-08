@@ -13,6 +13,7 @@ from openai import OpenAI
 
 import database
 import dhl_shipping
+import openai_costs
 import packing_inventory as inventory
 
 
@@ -196,7 +197,32 @@ def sync_messages(api: Trading, conn, *, days: int = 30) -> int:
     return total_upserted
 
 
-def draft_reply(openai: OpenAI, *, message_row, order_row: Optional[Any]) -> str:
+def _record_openai_usage(conn, *, model: str, resp, meta: dict) -> None:
+    try:
+        usage = getattr(resp, "usage", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+        total_tokens = getattr(usage, "total_tokens", None) if usage else None
+        est = openai_costs.estimate_cost_usd(
+            model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+        database.insert_openai_usage(
+            conn,
+            model=model,
+            endpoint="chat.completions",
+            prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+            completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
+            total_tokens=int(total_tokens) if total_tokens is not None else None,
+            estimated_cost_usd=float(est) if est is not None else None,
+            meta=meta,
+        )
+    except Exception:
+        pass
+
+
+def draft_reply(conn, openai: OpenAI, *, message_row, order_row: Optional[Any]) -> str:
     """
     Create a buyer-friendly response draft (do not auto-send).
     """
@@ -218,8 +244,9 @@ Write a helpful reply. If the buyer asks something unknown, ask a clarifying que
 Keep it polite and short.
 """
 
+    model = _env("OPENAI_TEXT_MODEL", "gpt-4o-mini")
     resp = openai.chat.completions.create(
-        model=_env("OPENAI_TEXT_MODEL", "gpt-4o-mini"),
+        model=model,
         messages=[
             {"role": "system", "content": "You are a helpful eBay seller assistant."},
             {"role": "user", "content": prompt.strip()},
@@ -227,6 +254,7 @@ Keep it polite and short.
         temperature=0.3,
         max_tokens=300,
     )
+    _record_openai_usage(conn, model=model, resp=resp, meta={"purpose": "draft_reply"})
     return resp.choices[0].message.content.strip()
 
 
@@ -407,7 +435,7 @@ def draft_unread_messages(conn, openai: Optional[OpenAI]) -> None:
         print("Message:")
         print(m["body"] or "")
         print()
-        draft = draft_reply(openai, message_row=m, order_row=order)
+        draft = draft_reply(conn, openai, message_row=m, order_row=order)
         print("[Draft Reply]")
         print(draft)
         print()
@@ -530,6 +558,25 @@ def manage_inventory(conn) -> None:
     print("Saved.")
 
 
+def show_openai_usage(conn) -> None:
+    days = int(_env("OPENAI_USAGE_DAYS", "30"))
+    summary = database.openai_usage_summary(conn, days=days)
+    calls = summary["calls"]
+    tokens = summary["total_tokens"]
+    est_cost = summary["estimated_cost_usd"]
+
+    print()
+    print("=" * 60)
+    print(f"OpenAI usage (local estimate) - last {days} days")
+    print("=" * 60)
+    print(f"Calls: {calls}")
+    print(f"Tokens: {tokens} (prompt={summary['prompt_tokens']} completion={summary['completion_tokens']})")
+    print(f"Estimated cost (USD): {est_cost:.6f}")
+    print()
+    print("Note: This is based on local logs + a pricing table in openai_costs.py.")
+    print("If you want accurate costs, update pricing there to match your OpenAI billing.")
+
+
 def main() -> int:
     load_dotenv()
 
@@ -555,6 +602,7 @@ def main() -> int:
         print("  4) Pack an order (enter weight/dims + DHL quote)")
         print("  5) Create DHL collection request payload")
         print("  6) Inventory (set box/material qty + reorder thresholds)")
+        print("  7) OpenAI usage & cost (local estimate)")
         print("  0) Exit")
 
         choice = _prompt("> ")
@@ -578,6 +626,8 @@ def main() -> int:
             build_dhl_collection(conn)
         elif choice == "6":
             manage_inventory(conn)
+        elif choice == "7":
+            show_openai_usage(conn)
         else:
             print("Unknown option.")
 

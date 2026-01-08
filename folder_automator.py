@@ -15,6 +15,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 
+import database
+import openai_costs
 
 ALLOWED_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif"}
 ALLOWED_VIDEO_EXTS = {".mp4", ".mov"}
@@ -251,6 +253,35 @@ def analyze_folder_with_chatgpt(
         max_tokens=2200,
         temperature=0.4,
     )
+
+    # Best-effort local usage tracking (cost is an estimate; update openai_costs.DEFAULT_PRICING if desired)
+    try:
+        usage = getattr(resp, "usage", None)
+        prompt_tokens = getattr(usage, "prompt_tokens", None) if usage else None
+        completion_tokens = getattr(usage, "completion_tokens", None) if usage else None
+        total_tokens = getattr(usage, "total_tokens", None) if usage else None
+        est = openai_costs.estimate_cost_usd(
+            model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+        )
+        conn = database.connect(_env("EBAY_DB_PATH", "ebay_data.db"))
+        database.init_db(conn)
+        database.insert_openai_usage(
+            conn,
+            model=model,
+            endpoint="chat.completions",
+            prompt_tokens=int(prompt_tokens) if prompt_tokens is not None else None,
+            completion_tokens=int(completion_tokens) if completion_tokens is not None else None,
+            total_tokens=int(total_tokens) if total_tokens is not None else None,
+            estimated_cost_usd=float(est) if est is not None else None,
+            meta={"images": len(images), "product_folder": product_folder.name},
+        )
+        conn.close()
+    except Exception:
+        # Never fail listing generation due to usage tracking
+        pass
+
     return json.loads(resp.choices[0].message.content)
 
 

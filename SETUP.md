@@ -44,6 +44,13 @@ EBAY_TOKEN=your-ebay-user-token
 EBAY_SITE_ID=3
 ```
 
+### OpenAI usage & costs (local tracking)
+
+spangle records OpenAI token usage to `ebay_data.db` whenever it calls the OpenAI API.  
+To see a summary, run `python ebay_manager.py` and choose the menu option **OpenAI usage & cost (local estimate)**.
+
+Pricing is a best-effort estimate; update `openai_costs.py` if you want accurate USD cost reporting.
+
 Optional (for DHL collection payload defaults):
 
 ```

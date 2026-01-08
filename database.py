@@ -110,6 +110,23 @@ def init_db(conn: sqlite3.Connection) -> None:
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_inventory_kind ON inventory_items(kind);")
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS openai_usage (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            created_at TEXT NOT NULL,
+            model TEXT NOT NULL,
+            endpoint TEXT NOT NULL, -- e.g. 'chat.completions'
+            prompt_tokens INTEGER,
+            completion_tokens INTEGER,
+            total_tokens INTEGER,
+            estimated_cost_usd REAL,
+            meta_json TEXT
+        );
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_openai_usage_created_at ON openai_usage(created_at);")
+
     conn.commit()
 
 
@@ -338,4 +355,54 @@ def list_inventory(conn: sqlite3.Connection, *, kind: Optional[str] = None) -> l
     else:
         cur = conn.execute("SELECT * FROM inventory_items ORDER BY kind ASC, name ASC")
     return list(cur.fetchall())
+
+
+def insert_openai_usage(
+    conn: sqlite3.Connection,
+    *,
+    model: str,
+    endpoint: str,
+    prompt_tokens: Optional[int],
+    completion_tokens: Optional[int],
+    total_tokens: Optional[int],
+    estimated_cost_usd: Optional[float],
+    meta: Optional[dict[str, Any]] = None,
+) -> None:
+    conn.execute(
+        """
+        INSERT INTO openai_usage (
+            created_at, model, endpoint, prompt_tokens, completion_tokens, total_tokens, estimated_cost_usd, meta_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            _utc_now_iso(),
+            model,
+            endpoint,
+            prompt_tokens,
+            completion_tokens,
+            total_tokens,
+            estimated_cost_usd,
+            json.dumps(meta, ensure_ascii=False) if meta else None,
+        ),
+    )
+    conn.commit()
+
+
+def openai_usage_summary(conn: sqlite3.Connection, *, days: int = 30) -> sqlite3.Row:
+    # SQLite datetime comparison: store ISO UTC; filter by prefix using datetime('now', '-N days')
+    cur = conn.execute(
+        """
+        SELECT
+            COUNT(*) AS calls,
+            COALESCE(SUM(total_tokens), 0) AS total_tokens,
+            COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+            COALESCE(SUM(completion_tokens), 0) AS completion_tokens,
+            COALESCE(SUM(estimated_cost_usd), 0.0) AS estimated_cost_usd
+        FROM openai_usage
+        WHERE created_at >= datetime('now', ?)
+        """,
+        (f"-{int(days)} days",),
+    )
+    return cur.fetchone()
 

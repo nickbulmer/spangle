@@ -79,6 +79,13 @@ If you include a `.mov`/`.mp4` in the product folder, spangle will:
 
 Requires `ffmpeg` installed and on PATH.
 
+## OpenAI usage & cost tracking (new)
+
+spangle logs OpenAI token usage **locally** to `ebay_data.db` when it calls the OpenAI API.  
+In `python ebay_manager.py` you can view a summary via the menu option **OpenAI usage & cost**.
+
+Cost is an **estimate** based on a small pricing table in `openai_costs.py` (edit it to match your billing for accuracy).
+
 ## Requirements
 
 - Python 3.8+
