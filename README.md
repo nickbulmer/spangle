@@ -24,7 +24,7 @@ Automatically generate eBay listings by analyzing product images with ChatGPT Vi
 
 3. Run:
    ```bash
-   python ebay_automator.py
+   python run.py
    ```
 
 ## Workflow

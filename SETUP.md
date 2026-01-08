@@ -23,7 +23,7 @@ This tool generates eBay listings by analyzing product photos from your local fi
 
 4. **Run the Script**
    ```bash
-   python ebay_automator.py
+   python run.py
    ```
 
 ## eBay Account Manager (orders, messages, packing, DHL)
@@ -168,7 +168,8 @@ If you want to automatically create listings on eBay:
 
 ```
 project/
-├── ebay_automator.py      # Main script
+├── run.py                # Main script
+├── ebay_automator.py     # Backwards-compatible shim
 ├── requirements.txt       # Python dependencies
 ├── credentials.json       # Google Drive API credentials (you create this)
 ├── token.json            # Auto-generated Google auth token
