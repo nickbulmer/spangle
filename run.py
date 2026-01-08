@@ -26,6 +26,27 @@ import openai_org_usage
 def main() -> int:
     load_dotenv()
 
+    # Routine key is required for any listing generation.
+    # User requested a friendly message instead of a traceback when this is missing.
+    if not os.getenv("SPANGLE_OPENAI_API_KEY"):
+        print()
+        print("=" * 60)
+        print("spangle setup needed: missing SPANGLE_OPENAI_API_KEY")
+        print("=" * 60)
+        print()
+        print("spangle reads your OpenAI key from Windows environment variables (you chose not to use .env).")
+        print("Set it, then re-run:")
+        print()
+        print("PowerShell (temporary, this terminal only):")
+        print('  $env:SPANGLE_OPENAI_API_KEY="YOUR_OPENAI_KEY"')
+        print("  python run.py")
+        print()
+        print("PowerShell (permanent):")
+        print('  setx SPANGLE_OPENAI_API_KEY "YOUR_OPENAI_KEY"')
+        print("  # then close/reopen your terminal and run: python run.py")
+        print()
+        return 2
+
     # Local folder-per-product root (relative by default)
     products_root = Path(os.getenv("PRODUCTS_ROOT", "products"))
     watch = os.getenv("WATCH_PRODUCTS", "false").lower() == "true"
