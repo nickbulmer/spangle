@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 
 import folder_automator
 import database
+import openai_org_usage
 
 
 def main() -> int:
@@ -30,24 +31,47 @@ def main() -> int:
     watch = os.getenv("WATCH_PRODUCTS", "false").lower() == "true"
     interval = int(os.getenv("WATCH_INTERVAL_SECONDS", "10"))
 
-    # Print local OpenAI usage/cost summary every run (best-effort; costs are estimates)
+    # Print OpenAI usage/cost summary every run.
+    # Prefer OpenAI org endpoints (real costs) and fall back to local estimate if not permitted.
     try:
         db_path = os.getenv("EBAY_DB_PATH", "ebay_data.db")
-        conn = database.connect(db_path)
-        database.init_db(conn)
         days = int(os.getenv("OPENAI_USAGE_DAYS", "30"))
-        before = database.openai_usage_summary(conn, days=days)
+
         print()
         print("=" * 60)
-        print(f"OpenAI usage (local estimate) - last {days} days")
+        print(f"OpenAI usage & cost - last {days} days")
         print("=" * 60)
-        print(
-            f"Calls: {before['calls']}  Tokens: {before['total_tokens']}  "
-            f"Est. cost (USD): {before['estimated_cost_usd']:.6f}"
-        )
+
+        try:
+            api_summary = openai_org_usage.usage_and_costs(days=days)
+            print("Source: OpenAI org Usage/Costs API")
+            if api_summary.total_cost_usd is not None:
+                print(f"Spend (USD): {api_summary.total_cost_usd:.2f}")
+            else:
+                print("Spend (USD): (not available)")
+            if api_summary.total_tokens is not None:
+                print(
+                    f"Tokens: {api_summary.total_tokens} "
+                    f"(input={api_summary.total_input_tokens} output={api_summary.total_output_tokens})"
+                )
+            else:
+                print("Tokens: (not available)")
+        except Exception as e:
+            # Fall back to local estimate
+            conn = database.connect(db_path)
+            database.init_db(conn)
+            before = database.openai_usage_summary(conn, days=days)
+            conn.close()
+            print("Source: local token log (estimate)")
+            print(
+                f"Calls: {before['calls']}  Tokens: {before['total_tokens']}  "
+                f"Est. cost (USD): {before['estimated_cost_usd']:.6f}"
+            )
+            print(f"Note: API-based costs not available ({e}).")
+
+        print()
         print("=" * 60)
         print()
-        conn.close()
     except Exception:
         # Never block the main workflow on usage reporting
         pass

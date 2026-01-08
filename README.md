@@ -81,14 +81,14 @@ Requires `ffmpeg` installed and on PATH.
 
 ## OpenAI usage & cost tracking (new)
 
-spangle logs OpenAI token usage **locally** to `ebay_data.db` when it calls the OpenAI API.  
-In `python ebay_manager.py` you can view a summary via the menu option **OpenAI usage & cost**.
+spangle can show OpenAI usage/costs in two ways:
+- **API-based (preferred)** if your key has access to the org endpoints
+- **Local estimate (fallback)** based on token logs in `ebay_data.db`
 
-Cost is an **estimate** based on a small pricing table in `openai_costs.py` (edit it to match your billing for accuracy).
+You can view a summary via `python ebay_manager.py` → **OpenAI usage & cost**.
 
 ## Requirements
 
 - Python 3.8+
 - OpenAI API key
-- Google Drive API credentials
 - (Optional) eBay API credentials for auto-posting

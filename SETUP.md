@@ -44,12 +44,13 @@ EBAY_TOKEN=your-ebay-user-token
 EBAY_SITE_ID=3
 ```
 
-### OpenAI usage & costs (local tracking)
+### OpenAI usage & costs
 
-spangle records OpenAI token usage to `ebay_data.db` whenever it calls the OpenAI API.  
-To see a summary, run `python ebay_manager.py` and choose the menu option **OpenAI usage & cost (local estimate)**.
+spangle supports two ways to track usage/costs:
+- **API-based (preferred)**: fetch org usage + costs via OpenAI Usage/Costs endpoints (requires permissions; may need an Admin key).
+- **Local estimate (fallback)**: logs tokens locally in `ebay_data.db` and estimates cost using `openai_costs.py`.
 
-Pricing is a best-effort estimate; update `openai_costs.py` if you want accurate USD cost reporting.
+To view a summary any time, run `python ebay_manager.py` and choose **OpenAI usage & cost**.
 
 Optional (for DHL collection payload defaults):
 
@@ -169,28 +170,14 @@ If you want to automatically create listings on eBay:
 ```
 project/
 ├── run.py                # Main script
-├── ebay_automator.py     # Backwards-compatible shim
 ├── requirements.txt       # Python dependencies
-├── credentials.json       # Google Drive API credentials (you create this)
-├── token.json            # Auto-generated Google auth token
 ├── .env                  # Your API keys (you create this)
-├── downloaded_images/    # Images downloaded from Drive
 └── listing_outputs/      # Generated listing files
     ├── listings.csv      # All listings in CSV format
     └── listing_*.json    # Individual listing details
 ```
 
 ## Troubleshooting
-
-### Google Drive Authentication
-- First run will open a browser for authentication
-- `token.json` will be created automatically
-- If authentication fails, delete `token.json` and try again
-
-### No Images Found
-- Verify your Google Drive folder ID is correct
-- Make sure images are in the folder (not subfolders)
-- Check that images are not in Trash
 
 ### ChatGPT Errors
 - Verify your OpenAI API key is correct
@@ -204,8 +191,6 @@ project/
 
 ## Notes
 
-- Images are downloaded to `downloaded_images/` folder
-- The script processes all images in the folder at once
-- For multiple products, use separate folders or run the script multiple times
-- Video files are detected but not analyzed (OpenAI Vision doesn't support video yet)
-- Review generated listings before posting to eBay
+- spangle is local-first (it reads from your local `products/` folder).
+- For multiple products, use separate folders or run in watch mode.
+- Review generated listings before posting to eBay.

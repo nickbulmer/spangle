@@ -14,6 +14,7 @@ from openai import OpenAI
 import database
 import dhl_shipping
 import openai_costs
+import openai_org_usage
 import packing_inventory as inventory
 
 
@@ -560,21 +561,38 @@ def manage_inventory(conn) -> None:
 
 def show_openai_usage(conn) -> None:
     days = int(_env("OPENAI_USAGE_DAYS", "30"))
-    summary = database.openai_usage_summary(conn, days=days)
-    calls = summary["calls"]
-    tokens = summary["total_tokens"]
-    est_cost = summary["estimated_cost_usd"]
+    print()
+    print("=" * 60)
+    print(f"OpenAI usage & cost - last {days} days")
+    print("=" * 60)
 
+    # Prefer org endpoints
+    try:
+        s = openai_org_usage.usage_and_costs(days=days)
+        print("Source: OpenAI org Usage/Costs API")
+        if s.total_cost_usd is not None:
+            print(f"Spend (USD): {s.total_cost_usd:.2f}")
+        else:
+            print("Spend (USD): (not available)")
+        if s.total_tokens is not None:
+            print(f"Tokens: {s.total_tokens} (input={s.total_input_tokens} output={s.total_output_tokens})")
+        else:
+            print("Tokens: (not available)")
+        print()
+        print("If this fails with 401/403, you may need an Admin API key (OPENAI_ADMIN_KEY).")
+        return
+    except Exception as e:
+        print(f"API unavailable ({e}). Falling back to local estimate.")
+
+    summary = database.openai_usage_summary(conn, days=days)
+    print("Source: local token log (estimate)")
+    print(f"Calls: {summary['calls']}")
+    print(
+        f"Tokens: {summary['total_tokens']} (prompt={summary['prompt_tokens']} completion={summary['completion_tokens']})"
+    )
+    print(f"Estimated cost (USD): {summary['estimated_cost_usd']:.6f}")
     print()
-    print("=" * 60)
-    print(f"OpenAI usage (local estimate) - last {days} days")
-    print("=" * 60)
-    print(f"Calls: {calls}")
-    print(f"Tokens: {tokens} (prompt={summary['prompt_tokens']} completion={summary['completion_tokens']})")
-    print(f"Estimated cost (USD): {est_cost:.6f}")
-    print()
-    print("Note: This is based on local logs + a pricing table in openai_costs.py.")
-    print("If you want accurate costs, update pricing there to match your OpenAI billing.")
+    print("Note: Local estimate uses a pricing table in openai_costs.py; edit it to match your billing for accuracy.")
 
 
 def main() -> int:
