@@ -76,7 +76,7 @@ def main() -> int:
         # Never block the main workflow on usage reporting
         pass
 
-    # folder_automator will validate OPENAI_API_KEY
+    # folder_automator will validate SPANGLE_OPENAI_API_KEY
     folder_automator.process_products_root(products_root, watch=watch, interval_seconds=interval)
     return 0
 

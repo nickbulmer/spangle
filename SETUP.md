@@ -18,7 +18,7 @@ This tool generates eBay listings by analyzing product photos from your local fi
    - Create a file named `.env` in this folder
    - Fill in your credentials:
      ```
-     OPENAI_API_KEY=your-openai-api-key-here
+     SPANGLE_OPENAI_API_KEY=your-openai-api-key-here
      ```
 
 4. **Run the Script**

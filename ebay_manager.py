@@ -49,7 +49,7 @@ def build_ebay_trading() -> Trading:
 
 
 def build_openai() -> Optional[OpenAI]:
-    api_key = _env("OPENAI_API_KEY")
+    api_key = _env("SPANGLE_OPENAI_API_KEY")
     if not api_key:
         return None
     return OpenAI(api_key=api_key)
@@ -422,7 +422,7 @@ def draft_unread_messages(conn, openai: Optional[OpenAI]) -> None:
         print("No unread messages.")
         return
     if not openai:
-        print("OPENAI_API_KEY not set; cannot draft. Set it and retry.")
+        print("SPANGLE_OPENAI_API_KEY not set; cannot draft. Set it and retry.")
         return
 
     for m in unread:

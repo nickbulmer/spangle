@@ -9,7 +9,7 @@ GOAL
 Use your API key to see the user and the org(s) it’s associated with:
 
 curl https://api.openai.com/v1/me \
-  -H "Authorization: Bearer $OPENAI_API_KEY"
+  -H "Authorization: Bearer $SPANGLE_OPENAI_API_KEY"
 
 Notes:
 - The response includes a user object and an org list (org IDs + titles).
@@ -19,7 +19,7 @@ Ref: https://help.openai.com/en/articles/9132009-how-can-i-view-the-users-or-org
 If you belong to multiple organizations or have legacy access, specify headers:
 
 curl https://api.openai.com/v1/models \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
+  -H "Authorization: Bearer $SPANGLE_OPENAI_API_KEY" \
   -H "OpenAI-Organization: $ORGANIZATION_ID" \
   -H "OpenAI-Project: $PROJECT_ID"
 
@@ -42,11 +42,11 @@ Key query parameters (varies slightly by endpoint):
 
 Example (completions usage):
 curl "https://api.openai.com/v1/organization/usage/completions?start_time=1730419200&end_time=1731024000&bucket_width=1d&group_by[]=model&group_by[]=api_key_id" \
-  -H "Authorization: Bearer $OPENAI_ADMIN_KEY" \
+  -H "Authorization: Bearer $ADMIN_OPENAI_API_KEY" \
   -H "Content-Type: application/json"
 
 Notes:
-- The official examples show Authorization with $OPENAI_ADMIN_KEY for organization usage endpoints.
+- The official examples show Authorization with an org Admin key for organization usage endpoints (spangle uses `$ADMIN_OPENAI_API_KEY`).
 Ref: https://platform.openai.com/docs/api-reference/usage
 
 4) Programmatic COSTS (spend) — Costs endpoint
@@ -62,11 +62,11 @@ Key query parameters:
 
 Example (grouped by project + invoice line item):
 curl "https://api.openai.com/v1/organization/costs?start_time=1730419200&end_time=1731024000&group_by[]=project_id&group_by[]=line_item" \
-  -H "Authorization: Bearer $OPENAI_ADMIN_KEY" \
+  -H "Authorization: Bearer $ADMIN_OPENAI_API_KEY" \
   -H "Content-Type: application/json"
 
 Notes:
-- The official examples show Authorization with $OPENAI_ADMIN_KEY for costs.
+- The official examples show Authorization with an org Admin key for costs (spangle uses `$ADMIN_OPENAI_API_KEY`).
 - The docs note Usage and Costs may differ slightly; Costs is recommended for financial reconciliation/invoices.
 Ref: https://platform.openai.com/docs/api-reference/usage
 

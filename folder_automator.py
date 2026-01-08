@@ -411,7 +411,7 @@ def process_products_root(products_root: Path, *, watch: bool = False, interval_
     products_root.mkdir(parents=True, exist_ok=True)
     outputs_dir = Path(_env("LISTING_OUTPUTS_DIR", "listing_outputs"))
 
-    client = OpenAI(api_key=_env_required("OPENAI_API_KEY"))
+    client = OpenAI(api_key=_env_required("SPANGLE_OPENAI_API_KEY"))
 
     def run_once() -> None:
         subfolders = sorted([p for p in products_root.iterdir() if p.is_dir()], key=lambda p: p.name.lower())

@@ -19,7 +19,7 @@ Automatically generate eBay listings by analyzing product images with ChatGPT Vi
 
 2. Create `.env` file with your credentials:
    ```
-   OPENAI_API_KEY=your-key
+   SPANGLE_OPENAI_API_KEY=your-key
    ```
 
 3. Run:
