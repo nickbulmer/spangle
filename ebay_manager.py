@@ -579,6 +579,15 @@ def show_openai_usage(conn) -> None:
         else:
             print("Tokens: (not available)")
         print()
+        # If API doesn't provide spend, show local estimate as a fallback.
+        if s.total_cost_usd is None:
+            summary = database.openai_usage_summary(conn, days=days)
+            print("Local estimate (fallback for cost):")
+            print(
+                f"Calls: {summary['calls']}  Tokens: {summary['total_tokens']}  "
+                f"Est. cost (USD): {summary['estimated_cost_usd']:.6f}"
+            )
+            print()
         print("If this fails with 401/403, you may need an Admin API key (ADMIN_OPENAI_API_KEY).")
         return
     except Exception as e:

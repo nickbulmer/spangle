@@ -77,6 +77,19 @@ def main() -> int:
                 )
             else:
                 print("Tokens: (not available)")
+
+            # If API doesn't provide spend, fall back to local estimate for cost display.
+            if api_summary.total_cost_usd is None:
+                conn = database.connect(db_path)
+                database.init_db(conn)
+                local = database.openai_usage_summary(conn, days=days)
+                conn.close()
+                print()
+                print("Local estimate (fallback for cost):")
+                print(
+                    f"Calls: {local['calls']}  Tokens: {local['total_tokens']}  "
+                    f"Est. cost (USD): {local['estimated_cost_usd']:.6f}"
+                )
         except Exception as e:
             # Fall back to local estimate
             conn = database.connect(db_path)
