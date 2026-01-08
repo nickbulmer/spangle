@@ -1,6 +1,6 @@
 # spangle - Setup Instructions
 
-This tool automatically generates eBay listings by analyzing product images from your Google Drive folder using ChatGPT Vision.
+This tool generates eBay listings by analyzing product photos from your local filesystem (ideal for Windows Google Drive sync).
 
 ## Quick Start
 
@@ -9,33 +9,19 @@ This tool automatically generates eBay listings by analyzing product images from
    pip install -r requirements.txt
    ```
 
-2. **Set Up Google Drive API**
-   - Go to https://console.cloud.google.com/
-   - Create a new project or select an existing one
-   - Enable the Google Drive API
-   - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-   - Choose "Desktop app" as the application type
-   - Download the credentials file and save it as `credentials.json` in this folder
-
-3. **Get OpenAI API Key**
+2. **Get OpenAI API Key**
    - Go to https://platform.openai.com/api-keys
    - Create a new API key
    - Copy the key
 
-4. **Get Google Drive Folder ID**
-   - Open your Google Drive folder in a web browser
-   - The folder ID is in the URL: `https://drive.google.com/drive/folders/FOLDER_ID_HERE`
-   - Copy the `FOLDER_ID_HERE` part
-
-5. **Configure Environment Variables**
+3. **Configure Environment Variables**
    - Create a file named `.env` in this folder
    - Fill in your credentials:
      ```
      OPENAI_API_KEY=your-openai-api-key-here
-     GOOGLE_DRIVE_FOLDER_ID=your-folder-id-here
      ```
 
-6. **Run the Script**
+4. **Run the Script**
    ```bash
    python ebay_automator.py
    ```

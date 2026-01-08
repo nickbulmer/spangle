@@ -4,11 +4,11 @@ Automatically generate eBay listings by analyzing product images with ChatGPT Vi
 
 ## Features
 
-- 📸 **Image Analysis**: Upload images from Google Drive, analyze with ChatGPT Vision
+- 📸 **Image Analysis**: Drop photos into local product folders, analyze with ChatGPT Vision
 - 🤖 **AI-Powered**: ChatGPT generates titles, descriptions, pricing, and all listing details
 - 📋 **Multiple Formats**: Saves listings as JSON and CSV for easy review
 - 🚀 **Auto-Post**: Optional automatic posting to eBay (requires eBay API credentials)
-- 📁 **Google Drive Integration**: Automatically downloads images from your Drive folder
+- 📁 **Local-first**: Designed for Windows Google Drive sync (no Google Drive API required)
 
 ## Quick Start
 
@@ -17,15 +17,12 @@ Automatically generate eBay listings by analyzing product images with ChatGPT Vi
    pip install -r requirements.txt
    ```
 
-2. Set up Google Drive API (see SETUP.md)
-
-3. Create `.env` file with your credentials:
+2. Create `.env` file with your credentials:
    ```
    OPENAI_API_KEY=your-key
-   GOOGLE_DRIVE_FOLDER_ID=your-folder-id
    ```
 
-4. Run:
+3. Run:
    ```bash
    python ebay_automator.py
    ```
@@ -33,7 +30,7 @@ Automatically generate eBay listings by analyzing product images with ChatGPT Vi
 ## Workflow
 
 1. Take photos/video on iPhone
-2. Upload to Google Drive folder
+2. Put photos into `products/<product_folder>/` (your Google Drive sync will handle moving them to this PC)
 3. Run script → ChatGPT analyzes images
 4. Review generated listings
 5. Optionally post to eBay automatically
