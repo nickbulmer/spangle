@@ -316,25 +316,38 @@ def process_one_product_folder(client: OpenAI, *, product_folder: Path, outputs_
     derived_frames: list[Path] = []
 
     # Video support: extract frames for analysis + a short highlight clip.
-    if videos:
-        # Use the first video by name (user can keep one turntable clip here).
-        video = videos[0]
-        ffmpeg, ffprobe = _require_ffmpeg()
-        duration_s = _probe_duration_seconds(ffprobe, video)
+    # If video processing fails (common with iPhone HEVC/HDR/DolbyVision on some setups),
+    # we fall back to processing any separately-taken photos instead of failing the whole folder.
+    if videos and _env("VIDEO_PROCESSING", "true").lower() == "true":
+        try:
+            # Use the first video by name (user can keep one turntable clip here).
+            video = videos[0]
+            ffmpeg, ffprobe = _require_ffmpeg()
+            duration_s = _probe_duration_seconds(ffprobe, video)
 
-        # Only (re)create derived assets if missing. Delete .processed to force a re-run.
-        if not derived_highlight.exists():
-            extract_first3s_highlight(ffmpeg, video_path=video, out_path=derived_highlight)
-        if not (derived_frames_dir / "frame_first.jpg").exists():
-            derived_frames = extract_keyframes_first_mid_last(
-                ffmpeg, video_path=video, out_dir=derived_frames_dir, duration_s=duration_s
-            )
-        else:
-            derived_frames = [
-                derived_frames_dir / "frame_first.jpg",
-                derived_frames_dir / "frame_middle.jpg",
-                derived_frames_dir / "frame_last.jpg",
-            ]
+            # Only (re)create derived assets if missing. Delete .processed to force a re-run.
+            if not derived_highlight.exists():
+                extract_first3s_highlight(ffmpeg, video_path=video, out_path=derived_highlight)
+            if not (derived_frames_dir / "frame_first.jpg").exists():
+                derived_frames = extract_keyframes_first_mid_last(
+                    ffmpeg, video_path=video, out_dir=derived_frames_dir, duration_s=duration_s
+                )
+            else:
+                derived_frames = [
+                    derived_frames_dir / "frame_first.jpg",
+                    derived_frames_dir / "frame_middle.jpg",
+                    derived_frames_dir / "frame_last.jpg",
+                ]
+        except Exception as e:
+            print()
+            print("WARNING: Video processing failed, so I'll ignore the video and use photos only.")
+            print(f"Reason: {e}")
+            print()
+            print("If this is an iPhone video, this is often caused by HEVC/HDR/Dolby Vision encoding.")
+            print("Fix on iPhone (recommended): Settings -> Camera -> Formats -> Most Compatible")
+            print("Also consider: Settings -> Camera -> Record Video -> HDR Video -> Off")
+            print("Then re-record the short turntable video and retry (delete the .processed marker to re-run).")
+            derived_frames = []
 
     # Include derived video frames + any separately-taken photos
     all_images = [*images, *[p for p in derived_frames if p.exists()]]
