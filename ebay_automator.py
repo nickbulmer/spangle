@@ -125,6 +125,15 @@ class eBayListingAutomator:
             
         except Exception as e:
             print(f"Error downloading from Google Drive: {e}")
+            # Most common case in a Windows-synced Google Drive setup:
+            # user wants local folder processing instead of Drive API OAuth.
+            msg = str(e)
+            if "credentials.json not found" in msg:
+                print()
+                print("Tip: If your Google Drive is synced locally (e.g. D:\\GoogleDrive\\My Drive\\...),")
+                print("you don't need the Google Drive API. Use the local folder workflow instead:")
+                print("  1) Create products\\<product_name>\\ and put photos inside")
+                print("  2) Run: python folder_automator.py")
             return []
     
     def analyze_images_with_chatgpt(self, image_paths, video_path=None):
